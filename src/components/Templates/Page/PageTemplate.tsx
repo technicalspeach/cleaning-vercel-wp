@@ -12,5 +12,9 @@ export default async function PageTemplate({ node }: TemplateProps) {
     id: node.databaseId,
   });
 
+  if (!page) {
+    return <div>No content found for this page.</div>;
+  }
+
   return <div dangerouslySetInnerHTML={{ __html: page?.content || "" }} />;
 }

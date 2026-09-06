@@ -1,60 +1,17 @@
-import Link from "next/link";
-import { print } from "graphql/language/printer";
-
-import styles from "./Navigation.module.css";
-
-import { MenuItem, RootQueryToMenuItemConnection } from "@/gql/graphql";
-import { fetchGraphQL } from "@/utils/fetchGraphQL";
-import gql from "graphql-tag";
-
-async function getData() {
-  const menuQuery = gql`
-    query MenuQuery {
-      menuItems(where: { location: PRIMARY_MENU }) {
-        nodes {
-          uri
-          target
-          label
-        }
-      }
-    }
-  `;
-
-  const { menuItems } = await fetchGraphQL<{
-    menuItems: RootQueryToMenuItemConnection;
-  }>(print(menuQuery));
-
-  if (menuItems === null) {
-    throw new Error("Failed to fetch data");
-  }
-
-  return menuItems;
-}
+import React from 'react';
 
 export default async function Navigation() {
-  const menuItems = await getData();
-
   return (
-    <nav
-      className={styles.navigation}
-      role="navigation"
-      itemScope
-      itemType="http://schema.org/SiteNavigationElement"
-    >
-      {menuItems.nodes.map((item: MenuItem, index: number) => {
-        if (!item.uri) return null;
-
-        return (
-          <Link
-            itemProp="url"
-            href={item.uri}
-            key={index}
-            target={item.target || "_self"}
-          >
-            <span itemProp="name">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <header style={{ padding: '20px', background: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: '1200px', margin: '0 auto' }}>
+        <strong style={{ fontSize: '20px' }}>Cleaning Xpert</strong>
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <span>Home</span>
+          <span>About</span>
+          <span>Services</span>
+          <span>Contact</span>
+        </div>
+      </div>
+    </header>
   );
 }

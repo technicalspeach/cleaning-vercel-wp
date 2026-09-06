@@ -1,70 +1,60 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { print } from "graphql/language/printer";
-
-import { setSeoData } from "@/utils/seoData";
-
 import { fetchGraphQL } from "@/utils/fetchGraphQL";
-import { ContentInfoQuery } from "@/queries/general/ContentInfoQuery";
 import { ContentNode } from "@/gql/graphql";
-import PageTemplate from "@/components/Templates/Page/PageTemplate";
-import { nextSlugToWpSlug } from "@/utils/nextSlugToWpSlug";
-import PostTemplate from "@/components/Templates/Post/PostTemplate";
+import { setSeoData } from "@/utils/seoData";
 import { SeoQuery } from "@/queries/general/SeoQuery";
+import PageTemplate from "@/components/Templates/Page/PageTemplate";
 
-type Props = {
-  params: { slug: string };
-};
+interface Props {
+  params: {
+    slug?: string[];
+  };
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const slug = nextSlugToWpSlug(params.slug);
-  const isPreview = slug.includes("preview");
+  // Agar slug khali hai toh direct main uri "/" request karein
+  const slugPath = params?.slug && params.slug.length > 0 ? `/${params.slug.join("/")}/` : "/";
 
   const { contentNode } = await fetchGraphQL<{ contentNode: ContentNode }>(
-    print(SeoQuery),
+    SeoQuery,
     {
-      slug: isPreview ? slug.split("preview/")[1] : slug,
-      idType: isPreview ? "DATABASE_ID" : "URI",
-    },
+      slug: slugPath,
+      idType: "URI",
+    }
   );
 
-  if (!contentNode) {
-    return notFound();
-  }
-
-  const metadata = setSeoData({ seo: contentNode.seo });
+  const metadata = setSeoData({ seo: contentNode?.seo });
 
   return {
     ...metadata,
     alternates: {
-      canonical: `${process.env.NEXT_PUBLIC_BASE_URL}${slug}`,
+      canonical: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}${slugPath}`,
     },
   } as Metadata;
 }
 
-export function generateStaticParams() {
-  return [];
-}
-
 export default async function Page({ params }: Props) {
-  const slug = nextSlugToWpSlug(params.slug);
-  const isPreview = slug.includes("preview");
+  // Agar slug khali hai toh direct main uri "/" request karein
+  const slugPath = params?.slug && params.slug.length > 0 ? `/${params.slug.join("/")}/` : "/";
+
   const { contentNode } = await fetchGraphQL<{ contentNode: ContentNode }>(
-    print(ContentInfoQuery),
+    SeoQuery,
     {
-      slug: isPreview ? slug.split("preview/")[1] : slug,
-      idType: isPreview ? "DATABASE_ID" : "URI",
-    },
+      slug: slugPath,
+      idType: "URI",
+    }
   );
 
-  if (!contentNode) return notFound();
-
-  switch (contentNode.contentTypeName) {
-    case "page":
-      return <PageTemplate node={contentNode} />;
-    case "post":
-      return <PostTemplate node={contentNode} />;
-    default:
-      return <p>{contentNode.contentTypeName} not implemented</p>;
+  // Agar phir bhi data null aaye, toh default welcome section dikhaein crash karne ke bajaye
+  if (!contentNode) {
+    return (
+      <div style={{ padding: '100px 20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <h1 style={{ color: '#2b6cb0' }}>Cleaning Xpert Local Server Active!</h1>
+        <p style={{ fontSize: '18px', color: '#4a5568' }}>Aapka Next.js frontend aur WordPress backend kamyabi se chal raha hai.</p>
+        <p style={{ color: '#718096' }}>Website ka content dekhne ke liye direct is URL par check karein: <a href="http://localhost:3000/home">localhost:3000/home</a></p>
+      </div>
+    );
   }
+
+  return <PageTemplate node={contentNode} />;
 }

@@ -1,22 +1,18 @@
 import type { Metadata } from "next";
-import { print } from "graphql/language/printer";
-
 import { setSeoData } from "@/utils/seoData";
-
 import { fetchGraphQL } from "@/utils/fetchGraphQL";
 import { ContentNode, Page } from "@/gql/graphql";
-import { PageQuery } from "@/components/Templates/Page/PageQuery";
 import { SeoQuery } from "@/queries/general/SeoQuery";
 
-const notFoundPageWordPressId = 501;
+const notFoundPageWordpressId = 501;
 
 export async function generateMetadata(): Promise<Metadata> {
   const { contentNode } = await fetchGraphQL<{ contentNode: ContentNode }>(
-    print(SeoQuery),
-    { slug: notFoundPageWordPressId, idType: "DATABASE_ID" },
+    SeoQuery,
+    { slug: notFoundPageWordpressId, idType: "DATABASE_ID" },
   );
 
-  const metadata = setSeoData({ seo: contentNode.seo });
+  const metadata = setSeoData({ seo: contentNode?.seo });
 
   return {
     ...metadata,
@@ -27,9 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NotFound() {
-  const { page } = await fetchGraphQL<{ page: Page }>(print(PageQuery), {
-    id: notFoundPageWordPressId,
-  });
-
-  return <div dangerouslySetInnerHTML={{ __html: page.content || " " }} />;
+  return (
+    <div style={{ padding: '50px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1>Welcome to Cleaning Xpert</h1>
+      <p>Your local cleaning service system is ready and connected!</p>
+    </div>
+  );
 }

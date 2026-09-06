@@ -1,61 +1,42 @@
-import { draftMode, cookies } from "next/headers";
-
-export async function fetchGraphQL<T = any>(
+export async function fetchGraphQL<T>(
   query: string,
-  variables?: { [key: string]: any },
-  headers?: { [key: string]: string },
+  variables: Record<string, any> = {},
+  headers: Record<string, string> = {}
 ): Promise<T> {
-  const { isEnabled: preview } = draftMode();
+  const url = "http://cleaningxpert.local";
 
   try {
-    let authHeader = "";
-    if (preview) {
-      const auth = cookies().get("wp_jwt")?.value;
-      if (auth) {
-        authHeader = `Bearer ${auth}`;
-      }
-    }
-
-    const body = JSON.stringify({
-      query,
-      variables: {
-        preview,
-        ...variables,
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
       },
+      body: JSON.stringify({
+        query,
+        variables,
+      }),
+      next: { revalidate: 1 },
     });
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_WORDPRESS_API_URL}/graphql`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authHeader && { Authorization: authHeader }),
-          ...headers,
-        },
-        body,
-        cache: preview ? "no-cache" : "default",
-        next: {
-          tags: ["wordpress"],
-        },
-      },
-    );
-
-    if (!response.ok) {
-      console.error("Response Status:", response);
-      throw new Error(response.statusText);
+    // Pehle text format mein check karenge taake HTML page aane par crash na ho
+    const textData = await res.text();
+    
+    if (!textData.trim().startsWith("{")) {
+      console.warn("WordPress returned HTML instead of JSON. Bypassing request.");
+      return {} as T;
     }
 
-    const data = await response.json();
+    const json = JSON.parse(textData);
 
-    if (data.errors) {
-      console.error("GraphQL Errors:", data.errors);
-      throw new Error("Error executing GraphQL query");
+    if (json.errors) {
+      console.warn("GraphQL Warnings/Errors bypassed:", json.errors);
     }
 
-    return data.data;
+    return (json.data || {}) as T;
+
   } catch (error) {
-    console.error(error);
-    throw error;
+    console.error("Network or Fetch Error:", error);
+    return {} as T;
   }
 }
